@@ -32,3 +32,6 @@ huggingface_hub/
 .env
 .DS_Store
 EOF
+
+# Unsloth compiled cache
+unsloth_compiled_cache/
