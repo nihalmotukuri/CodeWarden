@@ -48,16 +48,14 @@ def detect_language(text: str, filename: Optional[str] = None) -> str:
             if filename.lower().endswith(ext):
                 return lang
 
-    # Check diff file headers (e.g. +++ b/app/main.py)
     diff_file_match = re.search(r"\+\+\+ b/[^\s]+(\.[a-zA-Z0-9]+)", text)
     if diff_file_match:
         ext = diff_file_match.group(1).lower()
         if ext in EXT_LANG_MAP:
             return EXT_LANG_MAP[ext]
 
-    # Heuristic syntax detection
     t = text.lower()
-    if "def " in t or "import " in t and ("fastapi" in t or "sqlite3" in t or "os." in t or "__name__" in t):
+    if "def " in t or ("import " in t and any(k in t for k in ["os.", "sys.", "subprocess", "sqlite3", "fastapi", "flask", "django"])):
         return "python"
     if "const " in t or "async (" in t or "req." in t or "express" in t or "=>" in t:
         return "typescript" if ": string" in t or ": number" in t or "interface " in t else "javascript"
@@ -77,14 +75,29 @@ def is_diff(text: str) -> bool:
 
 
 def is_code_snippet(text: str) -> bool:
-    code_signals = [
+    # Avoid treating natural-language questions ("How do I import...") as raw code unless fenced
+    is_question = text.strip().endswith("?") and "```" not in text
+    if is_question:
+        return False
+
+    strong_code_patterns = [
         r"```",
-        r"\b(def|class|function|const|let|var|import|from|SELECT|INSERT|UPDATE|DELETE|public|private|func|#include)\b",
+        r"\bdef\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(",
+        r"\bfunction\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(",
+        r"\b(os\.system|subprocess\.|eval\(|exec\(|cursor\.execute|db\.execute|SELECT\s+.+\s+FROM)\b",
+        r"#include\s*<",
+        r"<\?php",
+    ]
+    if any(re.search(pat, text) for pat in strong_code_patterns):
+        return True
+
+    weak_signals = [
+        r"\b(class|const|let|var|import|from|return|public|private|func)\b",
         r"[{};()=<>]{2,}",
         r"->|=>|::",
     ]
-    score = sum(1 for pat in code_signals if re.search(pat, text))
-    return score >= 2 or len(text.splitlines()) >= 5 and score >= 1
+    score = sum(1 for pat in weak_signals if re.search(pat, text))
+    return score >= 2 or (len(text.splitlines()) >= 4 and score >= 1)
 
 
 def route_input(user_input: str, filename: Optional[str] = None, force_audit: bool = False) -> RouteResult:
@@ -147,7 +160,6 @@ def run_codewarden(user_input: str, filename: Optional[str] = None, force_audit:
     data = resp.json()
 
     content = data["message"]["content"]
-    # Calculate tokens/sec directly from Ollama's nanosecond telemetry
     eval_count = data.get("eval_count", 0)
     eval_duration_ns = data.get("eval_duration", 1)
     tok_per_sec = eval_count / (eval_duration_ns / 1e9) if eval_duration_ns > 0 else 0.0
