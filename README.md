@@ -26,17 +26,13 @@ Evaluated locally across 30 unseen vulnerability & clean code audit tasks:
 
 ## 🚀 Quickstart
 
-```bash
-# 1. Pull quantized weights from Hugging Face & register in Ollama
-huggingface-cli download nihalmotukuri/codewarden-7b-gguf --local-dir ./codewarden-7b
-ollama create codewarden:7b -f ./codewarden-7b/Modelfile
-
-# 2. Audit uncommitted changes in any local Git repo
-python -m app.cli diff --repo /path/to/repo
-
-# 3. Install automated Git pre-commit security hook
-python scripts/install_hook.py /path/to/repo
-
-# 4. Launch Streamlit UI or FastAPI server
-streamlit run app/ui.py --server.headless true
-uvicorn app.api:app --host 0.0.0.0 --port 8000
+1. **Download quantized weights from Hugging Face & register in Ollama:**
+   - `huggingface-cli download nihalmotukuri/codewarden-7b-gguf --local-dir ./codewarden-7b`
+   - `ollama create codewarden:7b -f ./codewarden-7b/Modelfile`
+2. **Audit uncommitted changes in any local Git repo:**
+   - `python -m app.cli diff --repo /path/to/repo`
+3. **Install automated Git pre-commit security hook:**
+   - `python scripts/install_hook.py /path/to/repo`
+4. **Launch Streamlit UI or FastAPI server:**
+   - `streamlit run app/ui.py --server.headless true`
+   - `uvicorn app.api:app --host 0.0.0.0 --port 8000`
