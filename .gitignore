@@ -1,0 +1,34 @@
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Python Bytecode & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Large Datasets & Raw Downloads (Keep small sample files if needed)
+data/*.jsonl
+data/*.parquet
+data/*.csv
+!data/sample_*.jsonl
+
+# Trained Weights, LoRA Adapters & GGUF Binaries (Never push to Git)
+models/
+outputs/
+checkpoints/
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.pth
+huggingface_hub/
+
+# Logs & Environment Secrets
+*.log
+.env
+.DS_Store
+EOF
