@@ -44,8 +44,8 @@ ollama cp hf.co/nihalmotukuri/actuator-7b-gguf:Q4_K_M actuator-7b:latest
 ### Installation
 
 ```bash
-git clone [https://github.com/nihalmotukuri/CodeWarden.git](https://github.com/nihalmotukuri/CodeWarden.git)
-cd codewarden
+git clone https://github.com/nihalmotukuri/CodeWarden.git
+cd CodeWarden
 uv sync
 ```
 
