@@ -1,37 +1,42 @@
-# Virtual Environments
-.venv/
-venv/
-env/
-
-# Python Bytecode & Caches
+# Python bytecode & packaging
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments & local env vars
+.venv/
+venv/
+.env
+.env.*
+
+# Testing, linting & type-checking caches
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-# Large Datasets & Raw Downloads (Keep small sample files if needed)
-data/*.jsonl
-data/*.parquet
-data/*.csv
-!data/sample_*.jsonl
-
-# Trained Weights, LoRA Adapters & GGUF Binaries (Never push to Git)
-models/
-outputs/
-checkpoints/
-*.gguf
-*.bin
-*.safetensors
-*.pt
-*.pth
-huggingface_hub/
-
-# Logs & Environment Secrets
-*.log
-.env
+# Local IDE & OS files
+.vscode/
+.idea/
 .DS_Store
-EOF
 
-# Unsloth compiled cache
+# Generated CodeWarden audit reports
+report.json
+*review*.json
+
+# ML training checkpoints, GGUF weights & Unsloth cache
+checkpoints/
 unsloth_compiled_cache/
+models/codewarden-7b-gguf/
+models/codewarden-7b-gguf_gguf/
+models/codewarden-7b-lora/
+*.gguf
+*.safetensors
+*.bin
+data/*.jsonl

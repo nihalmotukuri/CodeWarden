@@ -1,0 +1,37 @@
+[project]
+name = "codewarden"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Nihal Motukuri", email = "nihalmotukuri.work@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "ollama>=0.6.3",
+    "pydantic>=2.14.4",
+    "rich>=15.0.0",
+    "tree-sitter>=0.26.1",
+    "tree-sitter-cpp>=0.23.4",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-typescript>=0.23.2",
+    "typer>=0.29.2",
+]
+
+[project.scripts]
+codewarden = "codewarden.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.13.9,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: tests requiring a running local Ollama instance with actuator-7b",
+]
