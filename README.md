@@ -24,7 +24,7 @@ git diff ──▶ Tree-sitter AST Slicer ──▶ Actuator-7B Agent Loop ─�
 ```
 
 1. **Diff & Deletion-Anchor Extraction (`src/codewarden/git_diff.py`):** Parses unified diffs for both added lines and deletion anchors, ensuring security regressions caused by removing validation or ownership checks are captured.
-2. **AST Function Slicing (`src/codewarden/ast_slicer.py`):** Uses Tree-sitter (`Python`, `TypeScript`, `TSX`, `C++`) to isolate the outermost enclosing functions/components overlapping modified lines, avoiding duplicate inner-callback noise.
+2. **AST Function Slicing (`src/codewarden/ast_slicer.py`):** Uses Tree-sitter (`Python`, `JavaScript`, `JSX`, `TypeScript`, `TSX`, `C++`) to isolate the outermost enclosing functions/components overlapping modified lines, avoiding duplicate inner-callback noise.
 3. **Sandboxed Repository Toolbox (`src/codewarden/tools.py`):** Exposes path-traversal-guarded, deduplication-cached tools (`search_symbol`, `read_file`, `get_file_imports`) with runtime/framework builtin filtering so the agent only queries project-specific symbols.
 4. **Structured Agent Loop (`src/codewarden/agent.py`):** Executes multi-step parallel tool exploration with `actuator-7b:latest` and enforces Pydantic schema decoding (`SliceReview`) on the final synthesis turn.
 5. **CLI & Telemetry (`src/codewarden/cli.py`):** Built with Typer and Rich for syntax-highlighted AST slice inspection, live tool-call tracing, severity filtering, and CI-ready JSON report exports.

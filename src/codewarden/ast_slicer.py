@@ -17,6 +17,10 @@ CPP_LANG = Language(tscpp.language())
 EXT_TO_LANG: dict[str, tuple[str, Language]] = {
     ".py": ("python", PY_LANG),
     ".ts": ("typescript", TS_LANG),
+    ".js": ("tsx", TSX_LANG),
+    ".jsx": ("tsx", TSX_LANG),
+    ".mjs": ("tsx", TSX_LANG),
+    ".cjs": ("tsx", TSX_LANG),
     ".tsx": ("tsx", TSX_LANG),
     ".cpp": ("cpp", CPP_LANG),
     ".cc": ("cpp", CPP_LANG),

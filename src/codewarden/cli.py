@@ -126,6 +126,7 @@ def review_changes(
     host: str = typer.Option("http://localhost:11434", "--host", help="Ollama server URL."),
     min_severity: str = typer.Option("medium", "--min-severity", help="Minimum severity to display (low|medium|high|critical)."),
     json_out: Path | None = typer.Option(None, "--json-out", help="Write structured JSON report to path."),
+    fix: bool = typer.Option(False, "--fix", help="Interactively preview and apply suggested patches to disk."),
 ) -> None:
     """Run Actuator-7B tool-calling security & bug review on modified AST slices."""
     repo_path = repo.expanduser().resolve()
