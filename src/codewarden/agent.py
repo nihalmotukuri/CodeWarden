@@ -25,8 +25,9 @@ Review Rules:
    - Broken access control / IDOR (e.g., mutating or reading a resource by ID while ignoring `user_id` / `session_user_id` parameters or removing ownership checks).
    - Functional & state bugs (missing state resets, stale closures, race conditions, null/undefined dereferences, off-by-one bounds).
 2. Category discipline: use `security` ONLY for actual vulnerabilities (injection, IDOR/auth bypass, XSS, open redirects, secret exposure). Use `bug` or `logic` for broken state updates, stale closures, missing resets, or crashes.
-3. Never treat UI/animation state (such as `reducedMotion`, theme toggles, or layout flags) or external framework hooks as security/IDOR issues.
-4. Abstain strictly when the code is sound: if the modified lines are safe and bug-free, do NOT invent stylistic suggestions or speculative nitpicks—return `has_issues: false` and `findings: []`.
+3. Frontend vs. Backend Context: In browser/client components (`'use client'`, React hooks, `fetch()`), standard HTTP headers like `Authorization: `Bearer ${token}`` are normal client auth—NEVER flag them as SQL/command injection or server-side IDORs. Client UI cannot perform server-side token ownership verification.
+4. Never treat UI/animation state (such as `reducedMotion`, theme toggles, or layout flags) or external framework hooks as security/IDOR issues.
+5. Abstain strictly when the code is sound: if the modified lines are safe and bug-free, do NOT invent stylistic suggestions or speculative nitpicks—return `has_issues: false` and `findings: []`.
 """
 
 

@@ -69,6 +69,9 @@ uv run codewarden review --repo /path/to/repo --base HEAD~1 --json-out report.js
 
 # Audit staged changes before committing
 uv run codewarden review --repo /path/to/repo --staged
+
+# Interactively preview and apply suggested patches
+uv run codewarden review --repo /path/to/repo --base HEAD~1 --fix
 ```
 
 ### CLI Options (`codewarden review`)
@@ -82,6 +85,7 @@ uv run codewarden review --repo /path/to/repo --staged
 | `--host` | `http://localhost:11434` | Ollama server URL |
 | `--min-severity` | `medium` | Minimum severity to display (`low`, `medium`, `high`, `critical`) |
 | `--json-out` | `None` | Export structured `ReviewReport` JSON to path |
+| `--fix` | `False` | Interactively preview and apply suggested patches to disk |
 
 ## Project Structure
 

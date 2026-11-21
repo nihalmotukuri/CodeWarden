@@ -40,6 +40,49 @@ def _collect_slices(repo_path: Path, base: str | None, staged: bool) -> list[Fun
     return slices
 
 
+
+
+def _apply_interactive_fix(repo_path: Path, finding: ReviewFinding) -> bool:
+    """Preview an exact before/after patch and apply it upon user confirmation."""
+    if not finding.original_code.strip() or not finding.replacement_code.strip():
+        return False
+    if finding.original_code.strip() == finding.replacement_code.strip():
+        return False
+
+    target = (repo_path / finding.file_path).resolve()
+    if not target.is_file():
+        return False
+
+    content = target.read_text(encoding="utf-8")
+    occurrences = content.count(finding.original_code)
+    if occurrences != 1:
+        console.print(
+            f"[yellow]Skipping auto-patch for {finding.file_path} (matched {occurrences} locations).[/yellow]"
+        )
+        return False
+
+    console.print(
+        Panel(
+            Syntax(
+                f"- {finding.original_code}\n+ {finding.replacement_code}",
+                "diff",
+                theme="monokai",
+                word_wrap=True,
+            ),
+            title=f"[bold cyan]Proposed Patch: {finding.file_path}:{finding.line_start}[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+    if typer.confirm("Apply this fix to disk?", default=False):
+        target.write_text(
+            content.replace(finding.original_code, finding.replacement_code, 1),
+            encoding="utf-8",
+        )
+        console.print(f"[bold green]✓ Patched {finding.file_path}[/bold green]")
+        return True
+    return False
+
+
 @app.command("slice")
 def slice_changes(
     repo: Path = typer.Option(Path("."), "--repo", "-r", help="Path to target Git repository."),
