@@ -46,6 +46,10 @@ class ReviewFinding(BaseModel):
         return max(0.0, min(1.0, num))
 
 
+    original_code: str = Field(default="", description="Exact verbatim line(s) from the slice to replace.")
+    replacement_code: str = Field(default="", description="Drop-in replacement line(s) fixing the defect.")
+
+
 class SliceReview(BaseModel):
     has_issues: bool
     findings: list[ReviewFinding] = Field(default_factory=list)

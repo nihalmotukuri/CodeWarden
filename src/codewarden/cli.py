@@ -44,9 +44,12 @@ def _collect_slices(repo_path: Path, base: str | None, staged: bool) -> list[Fun
 
 def _apply_interactive_fix(repo_path: Path, finding: ReviewFinding) -> bool:
     """Preview an exact before/after patch and apply it upon user confirmation."""
-    if not finding.original_code.strip() or not finding.replacement_code.strip():
-        return False
-    if finding.original_code.strip() == finding.replacement_code.strip():
+    orig = finding.original_code.strip("\n")
+    repl = finding.replacement_code.strip("\n")
+    if not orig.strip() or not repl.strip() or orig.strip() == repl.strip():
+        console.print(
+            f"[yellow]Skipping auto-patch for {finding.file_path}:{finding.line} (no concrete replacement emitted).[/yellow]"
+        )
         return False
 
     target = (repo_path / finding.file_path).resolve()
@@ -54,30 +57,33 @@ def _apply_interactive_fix(repo_path: Path, finding: ReviewFinding) -> bool:
         return False
 
     content = target.read_text(encoding="utf-8")
-    occurrences = content.count(finding.original_code)
-    if occurrences != 1:
-        console.print(
-            f"[yellow]Skipping auto-patch for {finding.file_path} (matched {occurrences} locations).[/yellow]"
-        )
-        return False
+    if content.count(orig) != 1:
+        # Fallback: match stripped line while preserving original indentation
+        matched_lines = [ln for ln in content.splitlines() if ln.strip() == orig.strip()]
+        if len(matched_lines) == 1:
+            indent = matched_lines[0][: len(matched_lines[0]) - len(matched_lines[0].lstrip())]
+            orig = matched_lines[0]
+            repl = "\n".join(indent + l.lstrip() if l.strip() else l for l in repl.splitlines())
+        else:
+            console.print(
+                f"[yellow]Skipping auto-patch for {finding.file_path} (matched {content.count(orig)} locations).[/yellow]"
+            )
+            return False
 
     console.print(
         Panel(
             Syntax(
-                f"- {finding.original_code}\n+ {finding.replacement_code}",
+                f"- {orig}\n+ {repl}",
                 "diff",
                 theme="monokai",
                 word_wrap=True,
             ),
-            title=f"[bold cyan]Proposed Patch: {finding.file_path}:{finding.line_start}[/bold cyan]",
+            title=f"[bold cyan]Proposed Patch: {finding.file_path}:{finding.line}[/bold cyan]",
             border_style="cyan",
         )
     )
     if typer.confirm("Apply this fix to disk?", default=False):
-        target.write_text(
-            content.replace(finding.original_code, finding.replacement_code, 1),
-            encoding="utf-8",
-        )
+        target.write_text(content.replace(orig, repl, 1), encoding="utf-8")
         console.print(f"[bold green]✓ Patched {finding.file_path}[/bold green]")
         return True
     return False
@@ -194,6 +200,10 @@ def review_changes(
                     border_style="red" if finding.severity in {"critical", "high"} else "yellow",
                 )
             )
+            if fix:
+                if not finding.original_code.strip():
+                    finding.original_code, finding.replacement_code = agent.generate_patch(fn, finding)
+                _apply_interactive_fix(repo_path, finding)
 
         summary_table = Table(title="Audit Summary")
         summary_table.add_column("Slices Analyzed", justify="right")

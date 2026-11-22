@@ -89,7 +89,7 @@ class CodeWardenAgent:
                 model=self.model,
                 messages=messages,
                 tools=TOOL_SCHEMAS,
-                options={"temperature": 0.0, "num_ctx": 8192},
+                options={"temperature": 0.0, "num_predict": 1024, "num_ctx": 8192},
             )
             assistant_msg = response.message
             tool_calls = assistant_msg.tool_calls or []
@@ -139,7 +139,7 @@ class CodeWardenAgent:
             model=self.model,
             messages=messages,
             format=SliceReview.model_json_schema(),
-            options={"temperature": 0.0, "num_ctx": 8192},
+            options={"temperature": 0.0, "num_predict": 1024, "num_ctx": 8192},
         )
         final_text = (final_response.message.content or "").strip()
         parsed = self._try_parse_review(final_text, fn_slice)
@@ -173,3 +173,20 @@ class CodeWardenAgent:
             findings=cleaned,
             summary=review.summary,
         )
+
+    def generate_patch(self, fn_slice: FunctionSlice, finding: ReviewFinding) -> tuple[str, str]:
+        schema = {"type": "object", "properties": {"original_code": {"type": "string", "minLength": 1}, "replacement_code": {"type": "string", "minLength": 1}}, "required": ["original_code", "replacement_code"]}
+        try:
+            resp = self.client.chat(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "Return JSON with ONLY the 1-3 exact defective lines in `original_code` and fixed lines in `replacement_code`. Never copy the whole function."},
+                    {"role": "user", "content": f"Line {finding.line}: {finding.title} ({finding.suggested_fix})\nCode:\n{fn_slice.source_code}"},
+                ],
+                format=schema,
+                options={"temperature": 0.0, "num_predict": 1024},
+            )
+            data = json.loads(resp.message.content)
+            return data.get("original_code", ""), data.get("replacement_code", "")
+        except Exception:
+            return "", ""

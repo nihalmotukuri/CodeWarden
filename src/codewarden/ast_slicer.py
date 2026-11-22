@@ -119,7 +119,9 @@ def slice_hunk(repo_path: Path, hunk: DiffHunk) -> list[FunctionSlice]:
     slices: list[FunctionSlice] = []
     for start_1, end_1 in sorted(outer_ranges):
         node, overlapping = matched_nodes[(start_1, end_1)]
-        snippet = "\n".join(source_lines[start_1 - 1 : end_1])
+        win_s = max(start_1, min(overlapping) - 40) if (end_1 - start_1) > 120 else start_1
+        win_e = min(end_1, max(overlapping) + 40) if (end_1 - start_1) > 120 else end_1
+        snippet = "\n".join(source_lines[win_s - 1 : win_e])
         slices.append(
             FunctionSlice(
                 file_path=hunk.file_path,
@@ -135,4 +137,7 @@ def slice_hunk(repo_path: Path, hunk: DiffHunk) -> list[FunctionSlice]:
             )
         )
 
+    if not slices and target_lines:
+        s1, e1 = max(1, min(target_lines) - 30), min(len(source_lines), max(target_lines) + 30)
+        slices.append(FunctionSlice(file_path=hunk.file_path, language=lang_name, symbol_name="<module>", node_type="module_fallback", start_line=s1, end_line=e1, changed_lines=sorted(target_lines), imports=imports, raw_patch=hunk.raw_patch, source_code="\n".join(source_lines[s1 - 1 : e1])))
     return slices
