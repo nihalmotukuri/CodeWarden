@@ -46,7 +46,7 @@ ollama cp hf.co/nihalmotukuri/actuator-7b-gguf:Q4_K_M actuator-7b:latest
 ```bash
 git clone https://github.com/nihalmotukuri/CodeWarden.git
 cd CodeWarden
-uv sync
+uv tool install -e .
 ```
 
 ## Usage
@@ -56,7 +56,7 @@ uv sync
 Inspect the exact enclosing functions/components that CodeWarden extracts from a Git diff before running model inference:
 
 ```bash
-uv run codewarden slice --repo /path/to/repo --base HEAD~1
+codewarden slice --repo /path/to/repo --base HEAD~1
 ```
 
 ### 2. Run an Agentic Security & Bug Review
@@ -65,13 +65,13 @@ Audit uncommitted working-tree changes, staged changes (`--staged`), or a commit
 
 ```bash
 # Audit against previous commit and export JSON report
-uv run codewarden review --repo /path/to/repo --base HEAD~1 --json-out report.json
+codewarden review --repo /path/to/repo --base HEAD~1 --json-out report.json
 
 # Audit staged changes before committing
-uv run codewarden review --repo /path/to/repo --staged
+codewarden review --repo /path/to/repo --staged
 
 # Interactively preview and apply suggested patches
-uv run codewarden review --repo /path/to/repo --base HEAD~1 --fix
+codewarden review --repo /path/to/repo --base HEAD~1 --fix
 ```
 
 ### CLI Options (`codewarden review`)
