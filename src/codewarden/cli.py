@@ -42,6 +42,24 @@ def _collect_slices(repo_path: Path, base: str | None, staged: bool) -> list[Fun
 
 
 
+def _check_syntax(repo_path: Path, rel_path: str) -> ReviewFinding | None:
+    target = (repo_path / rel_path).resolve()
+    if not target.is_file():
+        return None
+    if target.suffix == ".py":
+        try:
+            __import__("ast").parse(target.read_text(encoding="utf-8"), filename=rel_path)
+        except SyntaxError as e:
+            return ReviewFinding(file_path=rel_path, line=e.lineno or 1, symbol_name="<module>", severity="high", category="bug", confidence=1.0, title="Python Syntax Error", explanation=e.msg, suggested_fix="Fix the syntax error at the indicated line.")
+    elif target.suffix in {".js", ".mjs", ".cjs"} and __import__("shutil").which("node"):
+        res = __import__("subprocess").run(["node", "--check", str(target)], capture_output=True, text=True)
+        if res.returncode != 0:
+            lines = [ln for ln in res.stderr.splitlines() if ln.strip()]
+            ln_no = next((int(l.split(":")[-1]) for l in lines if f"{target.name}:" in l and l.split(":")[-1].isdigit()), 1)
+            return ReviewFinding(file_path=rel_path, line=ln_no, symbol_name="<module>", severity="high", category="bug", confidence=1.0, title="JavaScript Syntax Error", explanation=lines[-1] if lines else "Invalid JS syntax", suggested_fix="Fix the syntax error at the indicated line.")
+    return None
+
+
 def _apply_interactive_fix(repo_path: Path, finding: ReviewFinding) -> bool:
     """Preview an exact before/after patch and apply it upon user confirmation."""
     orig = finding.original_code.strip("\n")
@@ -145,7 +163,11 @@ def review_changes(
 
     toolbox = RepoToolbox(repo_path)
     all_findings: list[ReviewFinding] = []
+    slice_map: dict[int, FunctionSlice] = {}
     total_tool_calls = 0
+    for fpath in {s.file_path for s in slices}:
+        if syn := _check_syntax(repo_path, fpath):
+            all_findings.append(syn)
 
     console.print(
         f"[bold cyan]CodeWarden[/bold cyan] analyzing [bold]{len(slices)}[/bold] AST slice(s) "
@@ -167,9 +189,12 @@ def review_changes(
         filtered = [
             f for f in trace.slice_review.findings
             if SEVERITY_RANK.get(f.severity, 0) >= min_rank
+            and (not fn.changed_lines or any(abs(f.line - cl) <= 3 for cl in fn.changed_lines))
         ]
 
         if filtered:
+            for f in filtered:
+                slice_map[id(f)] = fn
             all_findings.extend(filtered)
             console.print(f"   [bold red]✗ {len(filtered)} issue(s) flagged[/bold red]")
         else:
@@ -201,8 +226,8 @@ def review_changes(
                 )
             )
             if fix:
-                if not finding.original_code.strip():
-                    finding.original_code, finding.replacement_code = agent.generate_patch(fn, finding)
+                if not finding.original_code.strip() and id(finding) in slice_map:
+                    finding.original_code, finding.replacement_code = agent.generate_patch(slice_map[id(finding)], finding)
                 _apply_interactive_fix(repo_path, finding)
 
         summary_table = Table(title="Audit Summary")
