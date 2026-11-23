@@ -167,6 +167,40 @@ class RepoToolbox:
 
         return "\n".join(results) if results else f"No matches found for '{query}'."
 
+    def find_references(self, symbol: str, limit: int = 25) -> str:
+        """Find word-boundary call sites and definitions of a project symbol across the repo."""
+        sym = symbol.strip()
+        if not sym or sym in IGNORED_BUILTINS:
+            return f"Skipped builtin/empty symbol '{symbol}'."
+        rx = __import__("re").compile(rf"\b{__import__('re').escape(sym)}\b")
+        hits: list[str] = []
+        for fp in self.repo_root.rglob('*'):
+            if not fp.is_file() or any(part in SKIP_DIRS for part in fp.parts):
+                continue
+            try:
+                lines = fp.read_text(encoding="utf-8").splitlines()
+            except UnicodeDecodeError:
+                continue
+            rel = fp.relative_to(self.repo_root).as_posix()
+            for i, ln in enumerate(lines, 1):
+                if rx.search(ln):
+                    hits.append(f"{rel}:{i}: {ln.strip()}")
+                    if len(hits) >= limit:
+                        return "\n".join(hits)
+        return "\n".join(hits) if hits else f"No references found for '{sym}'."
+
+    def git_blame(self, path: str, start_line: int, end_line: int) -> str:
+        """Return git blame commit metadata for a line range inside the repository."""
+        target = self._resolve_safe_path(path)
+        if not target.is_file():
+            return f"Error: File '{path}' not found."
+        s, e = max(1, start_line), min(max(1, end_line), start_line + 40)
+        res = __import__("subprocess").run(
+            ["git", "blame", "-s", "-L", f"{s},{e}", "--", str(target)],
+            cwd=self.repo_root, capture_output=True, text=True
+        )
+        return res.stdout.strip() or res.stderr.strip() or "No git blame history available."
+
     def dispatch(self, tool_name: str, arguments: dict[str, Any]) -> tuple[str, bool]:
         """Execute a tool call with deduplication caching. Returns (output, was_cached)."""
         cache_key = f"{tool_name}:{json.dumps(arguments, sort_keys=True)}"
@@ -177,6 +211,8 @@ class RepoToolbox:
             "read_file": self.read_file,
             "get_file_imports": self.get_file_imports,
             "search_symbol": self.search_symbol,
+            "find_references": self.find_references,
+            "git_blame": self.git_blame,
         }
         handler = handlers.get(tool_name)
         if handler is None:
@@ -253,6 +289,34 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     },
                 },
                 "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_references",
+            "description": "Find exact word-boundary call sites and definitions of a project function, class, or variable across files to trace data flow.",
+            "parameters": {
+                "type": "object",
+                "properties": {"symbol": {"type": "string", "description": "Exact identifier name to trace."}},
+                "required": ["symbol"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_blame",
+            "description": "Inspect git blame line history to check if surrounding code is newly introduced or legacy.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Relative path from repo root."},
+                    "start_line": {"type": "integer"},
+                    "end_line": {"type": "integer"},
+                },
+                "required": ["path", "start_line", "end_line"],
             },
         },
     },

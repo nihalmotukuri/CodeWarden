@@ -237,6 +237,9 @@ def review_changes(
         summary_table.add_row(str(len(slices)), str(total_tool_calls), str(len(all_findings)))
         console.print(summary_table)
 
+    if all_findings:
+        raise typer.Exit(code=1)
+
     if json_out is not None:
         report = ReviewReport(
             repo=str(repo_path),
@@ -247,6 +250,27 @@ def review_changes(
         )
         json_out.write_text(report.model_dump_json(indent=2), encoding="utf-8")
         console.print(f"[dim]Saved JSON report to {json_out}[/dim]")
+
+
+
+@app.command("init")
+def init_repo(
+    repo: Path = typer.Option(Path("."), "--repo", "-r", help="Target Git repository."),
+    hook: bool = typer.Option(True, "--hook/--no-hook", help="Install .git/hooks/pre-commit."),
+    ci: bool = typer.Option(True, "--ci/--no-ci", help="Generate .github/workflows/codewarden.yml."),
+) -> None:
+    """Install a Git pre-commit hook and/or GitHub Actions workflow."""
+    root = repo.resolve()
+    if hook and (root / ".git").is_dir():
+        hp = root / ".git" / "hooks" / "pre-commit"
+        hp.write_text("#!/usr/bin/env bash\nset -e\nif ! command -v codewarden >/dev/null 2>&1; then exit 0; fi\ncodewarden review --staged --min-severity high\n")
+        hp.chmod(0o755)
+        console.print(f"[green]✓ Installed pre-commit hook at {hp}[/green]")
+    if ci:
+        wf = root / ".github" / "workflows" / "codewarden.yml"
+        wf.parent.mkdir(parents=True, exist_ok=True)
+        wf.write_text("name: CodeWarden Audit\non: [pull_request]\njobs:\n  audit:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: astral-sh/setup-uv@v4\n      - run: uv tool install git+https://github.com/nihalmotukuri/CodeWarden.git\n      - run: codewarden review --base ${{ github.event.pull_request.base.sha }} --min-severity high --json-out codewarden-report.json\n")
+        console.print(f"[green]✓ Generated CI workflow at {wf}[/green]")
 
 
 if __name__ == "__main__":

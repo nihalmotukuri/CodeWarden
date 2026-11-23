@@ -126,3 +126,34 @@ def test_actuator_catches_real_idor_and_sql_injection(tmp_path: Path) -> None:
     assert trace.slice_review.has_issues is True
     assert len(trace.slice_review.findings) >= 1
     assert any(f.severity in {"critical", "high"} for f in trace.slice_review.findings)
+
+
+def test_v020_init_and_cross_file_tools(tmp_path: Path) -> None:
+    import subprocess
+    from typer.testing import CliRunner
+    from codewarden.cli import app, _check_syntax
+    from codewarden.tools import RepoToolbox
+
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
+    f = tmp_path / "svc.py"
+    f.write_text("def run_query(sql):\n    return sql\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "init"], cwd=tmp_path, check=True)
+
+    res = CliRunner().invoke(app, ["init", "--repo", str(tmp_path)])
+    assert res.exit_code == 0
+    assert (tmp_path / ".git" / "hooks" / "pre-commit").is_file()
+    assert (tmp_path / ".github" / "workflows" / "codewarden.yml").is_file()
+
+    tb = RepoToolbox(tmp_path)
+    refs, _ = tb.dispatch("find_references", {"symbol": "run_query"})
+    assert "svc.py:1" in refs
+    blame, _ = tb.dispatch("git_blame", {"path": "svc.py", "start_line": 1, "end_line": 2})
+    assert "def run_query" in blame
+
+    bad = tmp_path / "bad.py"
+    bad.write_text("def broken(:\n    pass\n")
+    syn = _check_syntax(tmp_path, "bad.py")
+    assert syn is not None and syn.title == "Python Syntax Error"
