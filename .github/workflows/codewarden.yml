@@ -1,0 +1,12 @@
+name: CodeWarden Audit
+on: [pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v4
+      - run: uv tool install git+https://github.com/nihalmotukuri/CodeWarden.git
+      - run: codewarden review --base ${{ github.event.pull_request.base.sha }} --min-severity high --json-out codewarden-report.json
