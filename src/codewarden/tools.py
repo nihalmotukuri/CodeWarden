@@ -33,6 +33,21 @@ IGNORED_BUILTINS = {
     "Suspense",
     "StrictMode",
     "createContext",
+    "createPortal",
+    "Routes",
+    "Route",
+    "BrowserRouter",
+    "MemoryRouter",
+    "Navigate",
+    "Link",
+    "useLocation",
+    "useNavigate",
+    "useParams",
+    "useQuery",
+    "useInfiniteQuery",
+    "useQueryClient",
+    "vi",
+
     "Path",
     "Console",
     "Panel",
@@ -178,7 +193,7 @@ class RepoToolbox:
     def find_references(self, symbol: str, limit: int = 25) -> str:
         """Find word-boundary call sites and definitions of a project symbol across the repo."""
         sym = symbol.strip()
-        if not sym or sym in IGNORED_BUILTINS:
+        if not sym or sym in IGNORED_BUILTINS or any(ch in sym for ch in ("-", ":", "/", "[", ".")):
             return f"Skipped builtin/empty symbol '{symbol}'."
         rx = __import__("re").compile(rf"\b{__import__('re').escape(sym)}\b")
         hits: list[str] = []
@@ -198,6 +213,8 @@ class RepoToolbox:
         return "\n".join(hits) if hits else f"No references found for '{sym}'."
 
     def git_blame(self, path: str, start_line: int, end_line: int) -> str:
+        start_line = max(1, start_line - 10)
+        end_line = max(end_line + 10, start_line + 24)
         """Return git blame commit metadata for a line range inside the repository."""
         target = self._resolve_safe_path(path)
         if not target.is_file():
