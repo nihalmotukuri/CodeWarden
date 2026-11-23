@@ -198,7 +198,7 @@ def review_changes(
             all_findings.extend(filtered)
             console.print(f"   [bold red]✗ {len(filtered)} issue(s) flagged[/bold red]")
         else:
-            console.print(f"   [green]✓ Clean[/green] [dim]({trace.slice_review.summary})[/dim]")
+            console.print("   [green]✓ Clean[/green]")
 
     console.print()
     if not all_findings:
